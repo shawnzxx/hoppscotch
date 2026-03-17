@@ -5,7 +5,6 @@ services:
     restart: always
     user: postgres
     environment:
-      # PostgreSQL default user and credentials
       POSTGRES_USER: postman
       POSTGRES_PASSWORD: postman
       POSTGRES_DB: hoppscotch
@@ -21,10 +20,33 @@ services:
     volumes:
       - hoppscotch-db:/var/lib/postgresql/data
   hoppscotch-aio:
-    restart: always
     image: hoppscotch/hoppscotch
+    container_name: hoppscotch-aio
+    restart: always
+    user: root
     env_file:
       - ./.env
+    environment:
+      npm_config_registry: "https://nexus.in.spdigital.sg/repository/npm-proxy/"
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/zscaler-ca.crt"
+      # Proxy passthrough (optional): allows Prisma/Node to reach external HTTPS via your corporate proxy
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-hoppscotch-db,localhost,127.0.0.1}
+      http_proxy: ${http_proxy:-}
+      https_proxy: ${https_proxy:-}
+      no_proxy: ${no_proxy:-hoppscotch-db,localhost,127.0.0.1}
+
+      # Prisma: some corporate filters block the checksum endpoint with 403; allow startup to continue
+      PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING: "true"
+      # Optional: point Prisma engine downloads to an internal mirror (recommended when binaries.prisma.sh is blocked)
+      PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
+      PRISMA_BINARY_MIRROR: ${PRISMA_BINARY_MIRROR:-}
+    volumes:
+      # 挂载本地的 CA 证书
+      - ./zscaler-ca.crt:/usr/local/share/ca-certificates/zscaler-ca.crt:ro
+      # Optional: pre-downloaded Prisma engines (avoid downloading from binaries.prisma.sh)
+      - ./prisma-engines:/opt/prisma-engines:ro
     depends_on:
       hoppscotch-db:
         condition: service_healthy
@@ -33,6 +55,6 @@ services:
       - "3100:3100"
       - "3170:3170"
     command: >
-      sh -c "pnpx prisma migrate deploy && node /usr/src/app/aio_run.mjs"
+      sh -c "update-ca-certificates && pnpx prisma migrate deploy && node /usr/src/app/aio_run.mjs"
 volumes:
   hoppscotch-db:

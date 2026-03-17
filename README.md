@@ -157,6 +157,47 @@ docker compose logs hoppscotch-aio
 docker compose logs hoppscotch-db
 ```
 
+**Corporate SSL inspection (e.g. Zscaler) / Prisma engine download fails:**
+
+If you see errors like:
+- `unable to get local issuer certificate`
+- `Failed to fetch the engine file ... binaries.prisma.sh ... 403 Forbidden`
+
+Then:
+1. Make sure the corporate Root CA is available inside the container and `NODE_EXTRA_CA_CERTS` points to it. This repo ships a `zscaler-ca.crt` file and mounts it in `docker-compose.yml`.
+2. If your network blocks `https://binaries.prisma.sh` (common in corporate filters), Prisma cannot download its engine binaries. Fix options:
+   - Ask IT/security to allowlist `binaries.prisma.sh`, or
+   - Provide an internal mirror and set `PRISMA_ENGINES_MIRROR` (and/or `PRISMA_BINARY_MIRROR`) in your environment.
+3. If your environment requires an explicit proxy, set `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY` (the compose file passes them through if present).
+
+**Manual/offline Prisma `schema-engine` (when `binaries.prisma.sh` is blocked):**
+
+If you can download Prisma engines on another machine, you can bring the engine binary into this repo and point Prisma to it.
+
+1. On a machine that can access the internet, download the correct engine for your container platform.
+   - This compose uses the upstream `hoppscotch/hoppscotch` image which (on Apple Silicon / ARM) typically runs `linux-musl-arm64-openssl-3.0.x`.
+   - Example URL pattern:
+     `https://binaries.prisma.sh/all_commits/<COMMIT>/<BINARY_TARGET>/schema-engine.gz`
+2. Copy `schema-engine.gz` to `./prisma-engines/` in this repo.
+3. Unzip and make it executable (on macOS/Linux):
+   ```bash
+   mkdir -p prisma-engines
+   gunzip -c prisma-engines/schema-engine.gz > prisma-engines/schema-engine
+   chmod +x prisma-engines/schema-engine
+   ```
+4. In `.env`, set Prisma to use the local engine path inside the container:
+   ```bash
+   PRISMA_SCHEMA_ENGINE_BINARY=/opt/prisma-engines/schema-engine
+   ```
+5. Restart:
+   ```bash
+   docker compose up -d --force-recreate hoppscotch-aio
+   ```
+
+Notes:
+- `PRISMA_SCHEMA_ENGINE_BINARY` is the supported override variable; `PRISMA_MIGRATION_ENGINE_BINARY` is deprecated.
+- The engine binary must match your container runtime (musl vs glibc, amd64 vs arm64). If you get `Exec format error`, you downloaded the wrong target.
+
 **Database connection issues:**
 ```bash
 # Restart services
