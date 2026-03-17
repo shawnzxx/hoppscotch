@@ -1,0 +1,38 @@
+services:
+  hoppscotch-db:
+    image: postgres:15
+    container_name: hoppscotch-db
+    restart: always
+    user: postgres
+    environment:
+      # PostgreSQL default user and credentials
+      POSTGRES_USER: postman
+      POSTGRES_PASSWORD: postman
+      POSTGRES_DB: hoppscotch
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "sh -c 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}'",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - hoppscotch-db:/var/lib/postgresql/data
+  hoppscotch-aio:
+    restart: always
+    image: hoppscotch/hoppscotch
+    env_file:
+      - ./.env
+    depends_on:
+      hoppscotch-db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+      - "3100:3100"
+      - "3170:3170"
+    command: >
+      sh -c "pnpx prisma migrate deploy && node /usr/src/app/aio_run.mjs"
+volumes:
+  hoppscotch-db:
