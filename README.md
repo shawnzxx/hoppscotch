@@ -55,8 +55,8 @@ SESSION_SECRET="your-secure-session-secret-here"
 DATA_ENCRYPTION_KEY="your-32-character-encryption-key-here"
 
 # Your domain (if using a custom domain)
-HOPPSCOTCH_HOST=localhost:5000
-VITE_BASE_URL=http://localhost:5000
+HOPPSCOTCH_HOST=localhost:3000
+VITE_BASE_URL=http://localhost:3000
 ```
 
 ### 3. Start the Services
@@ -73,8 +73,8 @@ podman-compose up -d
 
 ### 4. Access Your Instance
 
-- **Hoppscotch Web App**: [http://localhost:5000](http://localhost:5000)
-- **Admin Panel**: [http://localhost:5000](http://localhost:5000/admin)
+- **Hoppscotch Web App**: [http://localhost:3000](http://localhost:3000)
+- **Admin Panel**: [http://localhost:3100](http://localhost:3100)
 
 ## Connecting Hoppscotch Desktop App
 
@@ -209,10 +209,34 @@ docker compose restart
 - Check that ports are not blocked
 - Ensure CORS origins are properly configured in `WHITELISTED_ORIGINS`
 
+**Browser CORS errors when sending requests (use Proxyscotch):**
+
+This repo can run [Proxyscotch](https://github.com/hoppscotch/proxyscotch) alongside Hoppscotch AIO.
+Instead of the browser calling the API directly (and getting blocked by CORS/corporate filters), Hoppscotch will call Proxyscotch, and Proxyscotch will forward the request from the server side.
+
+1. Configure (optional) in `.env`:
+   - `PROXYSCOTCH_ALLOWED_ORIGINS=http://localhost:3000`
+   - `PROXYSCOTCH_TOKEN=` (leave empty to disable token validation)
+2. Start / restart services:
+   ```bash
+   docker compose up -d
+   ```
+3. Verify Proxyscotch is reachable:
+   ```bash
+   docker compose logs -f proxyscotch
+   curl -v http://localhost:9159
+   ```
+4. In Hoppscotch UI:
+   - Open Settings (gear) -> Interceptor -> Proxy
+   - Proxy URL: `http://localhost:9159/` (note the trailing `/`)
+   - Access Token: same as `PROXYSCOTCH_TOKEN` (leave empty if unset)
+
+If Hoppscotch is accessed from a different hostname (e.g. `http://10.x.x.x:3000`), update `PROXYSCOTCH_ALLOWED_ORIGINS` accordingly.
+
 **TypeError: Cannot read properties of undefined (reading 'startsWith'):**
 - This error is typically caused by WebSocket URL protocol mismatch
 - Ensure `VITE_BACKEND_WS_URL` uses `ws://` for HTTP deployments or `wss://` for HTTPS deployments
-- Example: For HTTP use `ws://localhost:5000/backend/graphql`, for HTTPS use `wss://yourdomain.com/backend/graphql`
+- Example: For HTTP use `ws://localhost:3170/graphql`, for HTTPS use `wss://yourdomain.com/backend/graphql`
 
 ### Data Backup
 

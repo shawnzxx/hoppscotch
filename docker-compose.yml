@@ -22,6 +22,12 @@ services:
   hoppscotch-aio:
     image: hoppscotch/hoppscotch
     container_name: hoppscotch-aio
+    healthcheck:
+      test: ["CMD", "/bin/sh", "/healthcheck.sh"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
     restart: always
     user: root
     env_file:
@@ -56,5 +62,25 @@ services:
       - "3170:3170"
     command: >
       sh -c "update-ca-certificates && pnpx prisma migrate deploy && node /usr/src/app/aio_run.mjs"
+
+  # Optional: a lightweight proxy server to bypass browser CORS restrictions.
+  # Configure Hoppscotch UI: Settings -> Interceptor -> Proxy.
+  proxyscotch:
+    image: hoppscotch/proxyscotch:v0.1.4
+    container_name: proxyscotch
+    restart: unless-stopped
+    volumes:
+      # 挂载 Zscaler CA（与 hoppscotch-aio 用同一个文件）
+      - ./zscaler-ca.crt:/usr/local/share/ca-certificates/zscaler-ca.crt:ro
+    environment:
+      # Go 运行时官方环境变量，直接读取指定的 CA 文件
+      # 不调用任何系统命令，不需要 apk，不需要 update-ca-certificates
+      SSL_CERT_FILE: /usr/local/share/ca-certificates/zscaler-ca.crt
+      # Leave empty to disable access token validation.
+      PROXYSCOTCH_TOKEN: ${PROXYSCOTCH_TOKEN:-}
+      # Comma-separated list of allowed browser origins.
+      PROXYSCOTCH_ALLOWED_ORIGINS: ${PROXYSCOTCH_ALLOWED_ORIGINS:-http://localhost:3000}
+    ports:
+      - "9159:9159"
 volumes:
   hoppscotch-db:
