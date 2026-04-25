@@ -55,8 +55,8 @@ SESSION_SECRET="your-secure-session-secret-here"
 DATA_ENCRYPTION_KEY="your-32-character-encryption-key-here"
 
 # Your domain (if using a custom domain)
-HOPPSCOTCH_HOST=localhost:3000
-VITE_BASE_URL=http://localhost:3000
+HOPPSCOTCH_HOST=localhost:4000
+VITE_BASE_URL=http://localhost:4000
 ```
 
 ### 3. Start the Services
@@ -73,7 +73,7 @@ podman-compose up -d
 
 ### 4. Access Your Instance
 
-- **Hoppscotch Web App**: [http://localhost:3000](http://localhost:3000)
+- **Hoppscotch Web App**: [http://localhost:4000](http://localhost:4000)
 - **Admin Panel**: [http://localhost:3100](http://localhost:3100)
 
 ## Connecting Hoppscotch Desktop App
@@ -83,7 +83,7 @@ Add your self-hosted Hoppscotch instance to Hoppscotch Desktop App:
 1. Open Hoppscotch Desktop App
 2. Click the Hoppscotch logo in the top-left corner
 3. Click "Add an instance"
-4. Enter the URL of your self-hosted Hoppscotch instance (e.g., `http://localhost:3000`)
+4. Enter the URL of your self-hosted Hoppscotch instance (e.g., `http://localhost:4000`)
 5. Click "Connect"
 
 **Note**: Download the desktop app from [Hoppscotch Downloads](https://hoppscotch.com/download) if you haven't already.
@@ -215,11 +215,13 @@ This repo can run [Proxyscotch](https://github.com/hoppscotch/proxyscotch) along
 Instead of the browser calling the API directly (and getting blocked by CORS/corporate filters), Hoppscotch will call Proxyscotch, and Proxyscotch will forward the request from the server side.
 
 1. Configure (optional) in `.env`:
-   - `PROXYSCOTCH_ALLOWED_ORIGINS=http://localhost:3000`
+*our backend service usually running at 3000, so we setup hoppscotch at 4000*
+   - `PROXYSCOTCH_ALLOWED_ORIGINS=http://localhost:4000`
    - `PROXYSCOTCH_TOKEN=` (leave empty to disable token validation)
 2. Start / restart services:
    ```bash
-   docker compose up -d
+   make teardown
+   make setup
    ```
 3. Verify Proxyscotch is reachable:
    ```bash
@@ -231,7 +233,16 @@ Instead of the browser calling the API directly (and getting blocked by CORS/cor
    - Proxy URL: `http://localhost:9159/` (note the trailing `/`)
    - Access Token: same as `PROXYSCOTCH_TOKEN` (leave empty if unset)
 
-If Hoppscotch is accessed from a different hostname (e.g. `http://10.x.x.x:3000`), update `PROXYSCOTCH_ALLOWED_ORIGINS` accordingly.
+5. localhost:4000(hoppscotch portal container) -> hoppscotch proxy (container) -> localhost:3000
+   Reuqest URL can not use localhost:3000, becasue it will via proxy find the localhost:3000 inside the container env
+   what we need is via proxy container env -> fire back to local host machine 3000
+   we need to use `http://host.docker.internal:3000` instead
+
+for exmaple: 
+- LOCAL_API = http://host.docker.internal:3000
+- QA_API = https://b2c.api.sandbox.spdigital.sg/titan
+
+If Hoppscotch is accessed from a different hostname (e.g. `http://10.x.x.x:4000`), update `PROXYSCOTCH_ALLOWED_ORIGINS` accordingly.
 
 **TypeError: Cannot read properties of undefined (reading 'startsWith'):**
 - This error is typically caused by WebSocket URL protocol mismatch
@@ -241,6 +252,26 @@ If Hoppscotch is accessed from a different hostname (e.g. `http://10.x.x.x:3000`
 ### Data Backup
 
 ```bash
+# check your data, exec into postgres pod
+docker exec -it hoppscotch-db psql -U postman -d hoppscotch
+
+# That lists all tables in the public schema.
+\dt public.*
+
+# change to json output
+\x on
+
+# List our all public table
+SELECT tablename
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY tablename;
+
+# check if have data been stored
+SELECT * FROM "UserCollection";
+```
+
+```bash
 # Backup database
 docker exec hoppscotch-db pg_dump -U postgres hoppscotch > backup.sql
 
@@ -248,14 +279,3 @@ docker exec hoppscotch-db pg_dump -U postgres hoppscotch > backup.sql
 docker exec -i hoppscotch-db psql -U postgres hoppscotch < backup.sql
 ```
 
-## Support
-
-- **Documentation**: [Hoppscotch Docs](https://docs.hoppscotch.io)
-- **Community**: [Discord](https://hoppscotch.io/discord)
-- **Issues**: [GitHub Issues](https://github.com/hoppscotch/hoppscotch/issues)
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-Hoppscotch is licensed under the MIT License - see the [Hoppscotch License](https://github.com/hoppscotch/hoppscotch/blob/main/LICENSE) for details.  
