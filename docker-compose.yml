@@ -56,8 +56,9 @@ services:
     depends_on:
       hoppscotch-db:
         condition: service_healthy
+    # localhost:4000 -> container:3000 (Hoppscotch UI)
     ports:
-      - "3000:3000"
+      - "4000:3000"
       - "3100:3100"
       - "3170:3170"
     command: >
@@ -79,8 +80,11 @@ services:
       # Leave empty to disable access token validation.
       PROXYSCOTCH_TOKEN: ${PROXYSCOTCH_TOKEN:-}
       # Comma-separated list of allowed browser origins.
-      PROXYSCOTCH_ALLOWED_ORIGINS: ${PROXYSCOTCH_ALLOWED_ORIGINS:-http://localhost:3000}
+      PROXYSCOTCH_ALLOWED_ORIGINS: ${PROXYSCOTCH_ALLOWED_ORIGINS:-*}
     ports:
       - "9159:9159"
+    # map allow container talk to locaol host (for testing against local dev servers)
+    extra_hosts:
+    - "host.docker.internal:host-gateway"
 volumes:
   hoppscotch-db:
