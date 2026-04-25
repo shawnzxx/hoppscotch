@@ -100,7 +100,7 @@ Key configuration options in `.env`:
 | `JWT_SECRET` | Secret for JWT tokens | `secret1233` ⚠️ Change this |
 | `SESSION_SECRET` | Session encryption secret | `XXXXXXXXXX` ⚠️ Change this |
 | `DATA_ENCRYPTION_KEY` | 32-char encryption key | `abcdefghijklmnopqrstuvwxyz123456` |
-| `VITE_ALLOWED_AUTH_PROVIDERS` | Authentication methods | `EMAIL` |
+| `VITE_ALLOWED_AUTH_PROVIDERS` | Authentication methods | `VITE_ALLOWED_AUTH_PROVIDERS=EMAIL,GITHUB` |
 
 ### SMTP Configuration (Optional)
 
@@ -116,6 +116,23 @@ MAILER_SMTP_USER="your-email@domain.com"
 MAILER_SMTP_PASSWORD="your-app-password"
 MAILER_ADDRESS_FROM="noreply@yourdomain.com"
 ```
+
+To enable Github login, configure below envs
+
+```bash
+GITHUB_CLIENT_ID=xxx
+GITHUB_CLIENT_SECRET=xxx
+GITHUB_CALLBACK_URL=http://localhost:3170/v1/auth/github/callback
+GITHUB_SCOPE=user:email
+```
+
+!Important
+after you setup oauth you need to login to admin portal (not hoppscotch dahboard)
+admin portal: `http://localhost:3100` and finished your onboarding to Github first
+then you will have login account -> setup your workspace -> importa your collections -> your data will stored inside the postgress
+hoppscotch need a login user account then knowing store data inside which user account
+
+otherwise all your imported collections are only in browser storage only.
 
 ## Configuration
 
